@@ -34,9 +34,9 @@ export default {
   computed: {
     brushOptions() {
       let options = {
-        ...brushOption[this.brushWidth],
-        minDistance: 1,
-        dotSize: 0.1,
+        ...brushOption[this.brushWidth],    //笔刷宽度范围
+        minDistance: 5,    //两点间最小距离  影响起笔笔锋  线条顺滑
+        dotSize: 0.1,      //起点大小  影响起笔笔锋
       };
       for (let item in options) {
         options[item] = options[item] / this.ratioWidth;
@@ -168,6 +168,9 @@ export default {
         style: {
           ...customStyle,
         },
+        attr:{
+          class:'signature-board'
+        }
       },
       [
         createElement("canvas", {
@@ -200,4 +203,11 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+.signature-board {
+  position: relative;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100%;
+}
 </style>

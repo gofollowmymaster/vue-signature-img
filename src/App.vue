@@ -2,7 +2,6 @@
   <div id="app">
     <section class="board">
       <vueSignature
-        class="signature-board"
         ref="signature"
         img="/0.png"
         :customStyle="customStyle"
@@ -25,6 +24,8 @@
 
 <script>
 import vueSignature from "./components/vueSignature.vue";
+import vconsole from "vconsole";
+ new vconsole()
 
 export default {
   name: "App",
@@ -36,14 +37,13 @@ export default {
       img: "/0.png",
       customStyle: { width: "100%" },
       options: {
-        backgroundColor: "transparent",
-        penColor: "rgb(0,0,0)",
-        velocityFilterWeight: 0.7,
-        throttle: 1,
-        touchsStrategy: "force",
+        backgroundColor: "transparent",   //背景色
+        penColor: "rgb(0,0,0)",            //笔刷颜色
+        velocityFilterWeight: 0.7,         //上一点(宽度)权重
+        throttle: 5,                       //节流  性能/跟随速度
+        touchsStrategy: "mix",           //笔画宽度策略 pressure/speed/mix
       },
       isBrushOn: true,
-      imgDom: undefined,
       brushWidth: 3,
     };
   },
@@ -65,8 +65,6 @@ export default {
       const newWin = window.open("");
       newWin.document.body.appendChild(outputImg);
       newWin.document.title = "流程图";
-
-
     },
     setBrushWidth() {
       ++this.brushWidth;
@@ -95,14 +93,7 @@ export default {
   margin: 0;
 }
 .board {
-  /* position: relative; */
   width: 100%;
 }
-.signature-board {
-  position: relative;
-  top: 0px;
-  left: 0px;
-  width: 100vw;
-  height: 100%;
-}
+
 </style>
