@@ -2,86 +2,13 @@
  * Signature Pad v3.0.0-beta.4 | https://github.com/szimek/signature_pad
  * (c) 2020 Szymon Nowak | Released under the MIT license
  */
+import Pen from  './pen/pen.js'
+import Point  from './point.js'
 
-class Point {
-  constructor(x, y, time) {
-    this.x = x;
-    this.y = y;
-    this.time = time || Date.now();
-  }
-  distanceTo(start) {
-    return Math.sqrt(Math.pow(this.x - start.x, 2) + Math.pow(this.y - start.y, 2));
-  }
-  equals(other) {
-    return this.x === other.x && this.y === other.y && this.time === other.time;
-  }
-  velocityFrom(start) {
-    return this.time !== start.time
-      ? this.distanceTo(start) / (this.time - start.time)
-      : 0;
-  }
-}
+import Converter  from './converter.js'
 
-class Bezier {
-  constructor(startPoint, control2, control1, endPoint, startWidth, endWidth) {
-    this.startPoint = startPoint;
-    this.control2 = control2;
-    this.control1 = control1;
-    this.endPoint = endPoint;
-    this.startWidth = startWidth;
-    this.endWidth = endWidth;
-  }
-  static fromPoints(points, widths) {
-    const c2 = this.calculateControlPoints(points[0], points[1], points[2]).c2;
-    const c3 = this.calculateControlPoints(points[1], points[2], points[3]).c1;
-    return new Bezier(points[1], c2, c3, points[2], widths.start, widths.end);
-  }
-  static calculateControlPoints(s1, s2, s3) {
-    const dx1 = s1.x - s2.x;
-    const dy1 = s1.y - s2.y;
-    const dx2 = s2.x - s3.x;
-    const dy2 = s2.y - s3.y;
-    const m1 = { x: (s1.x + s2.x) / 2.0, y: (s1.y + s2.y) / 2.0 };
-    const m2 = { x: (s2.x + s3.x) / 2.0, y: (s2.y + s3.y) / 2.0 };
-    const l1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
-    const l2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-    const dxm = m1.x - m2.x;
-    const dym = m1.y - m2.y;
-    const k = l2 / (l1 + l2);
-    const cm = { x: m2.x + dxm * k, y: m2.y + dym * k };
-    const tx = s2.x - cm.x;
-    const ty = s2.y - cm.y;
-    return {
-      c1: new Point(m1.x + tx, m1.y + ty),
-      c2: new Point(m2.x + tx, m2.y + ty),
-    };
-  }
-  length() {
-    const steps = 10;
-    let length = 0;
-    let px;
-    let py;
-    for (let i = 0; i <= steps; i += 1) {
-      const t = i / steps;
-      const cx = this.point(t, this.startPoint.x, this.control1.x, this.control2.x, this.endPoint.x);
-      const cy = this.point(t, this.startPoint.y, this.control1.y, this.control2.y, this.endPoint.y);
-      if (i > 0) {
-        const xdiff = cx - px;
-        const ydiff = cy - py;
-        length += Math.sqrt(xdiff * xdiff + ydiff * ydiff);
-      }
-      px = cx;
-      py = cy;
-    }
-    return length;
-  }
-  point(t, start, c1, c2, end) {
-    return (start * (1.0 - t) * (1.0 - t) * (1.0 - t))
-      + (3.0 * c1 * (1.0 - t) * (1.0 - t) * t)
-      + (3.0 * c2 * (1.0 - t) * t * t)
-      + (end * t * t * t);
-  }
-}
+
+
 
 function throttle(fn, wait = 250) {
   let previous = 0;
@@ -123,9 +50,26 @@ function throttle(fn, wait = 250) {
 }
 
 class SignaturePad {
-  constructor(canvas, options = {}) {
+  constructor(canvas,{ parmFilterWeight =0.7,minWidth=0.5,maxWidth=2.5 ,throttleTime=16,minDistance=5,dotSize=(minWidth +  maxWidth) / 2 ,penColor='black',touchsStrategy="mix",boardScale=1.5,onBegin=()=>{},onEnd=()=>{},backgroundColor='rgba(0,0,0,0)'}) {
     this.canvas = canvas;
-    this.options = options;
+    this.onBegin = onBegin;
+    this.onEnd = onEnd;
+    this.backgroundColor = backgroundColor;
+
+    this._strokeMoveUpdate = throttleTime > 0 ? throttle(SignaturePad.prototype._strokeUpdate, throttleTime) : SignaturePad.prototype._strokeUpdate ;
+    touchsStrategy = ( ['pressure','mix'].includes(touchsStrategy) &&( 'ontouchstart' in window ||'PointerEvent' in window)) ? touchsStrategy : 'speed'
+
+    let ctx=canvas.getContext('2d');
+    this._ctx =ctx;
+
+
+
+   this.penOptions={ctx, parmFilterWeight ,minWidth,maxWidth ,minDistance,dotSize ,penColor,touchsStrategy,boardScale,}
+    this.pen=new Pen(this.penOptions)
+    this.converter=new Converter( canvas)
+
+
+
     this._handleMouseDown = (event) => {
       console.log('_handleMouseDown',event)
       if (event.which === 1|| !this._pointerId) {
@@ -134,7 +78,6 @@ class SignaturePad {
       }
     };
     this._handleMouseMove = (event) => {
-      console.log('_handleMouseMove',event)
       event.pointerId==event.pointerId||1
       if (this._pointerId==event.pointerId) {
         //防止多点触控线条乱连bug
@@ -190,30 +133,12 @@ class SignaturePad {
         }
       }
     };
-    this.velocityFilterWeight = options.velocityFilterWeight || 0.7;
-    this.minWidth = options.minWidth || 0.5;
-    this.maxWidth = options.maxWidth || 2.5;
-    this.throttle = ('throttle' in options ? options.throttle : 16);
-    this.minDistance = options.minDistance || 5;
-    this.dotSize =
-      options.dotSize ||
-      function dotSize() {
-        return (this.minWidth + this.maxWidth) / 2;
-      };
-    this.penColor = options.penColor || 'black';
-    this.backgroundColor = options.backgroundColor || 'rgba(0,0,0,0)';
-    this.onBegin = options.onBegin;
-    this.onEnd = options.onEnd;
-    this._strokeMoveUpdate = this.throttle > 0 ? throttle(SignaturePad.prototype._strokeUpdate, this.throttle) : SignaturePad.prototype._strokeUpdate, this.throttle;
-    this.lightLimit = options.lightLimit || 0.4
-    this.touchsStrategy = ( ['pressure','mix'].includes(options.touchsStrategy) &&( 'ontouchstart' in window ||'PointerEvent' in window)) ? options.touchsStrategy : 'speed'
 
-    this.boardScale = options.boardScale > 1.5 ? options.boardScale : 1.5
-
-
-    this._ctx = canvas.getContext('2d');
     this.clear();
     this.on();
+  }
+  setPenOption(key,value){
+    this.pen.setOption(key,value)
   }
   clear() {
     const { _ctx: ctx, canvas } = this;
@@ -221,37 +146,10 @@ class SignaturePad {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     this._data = [];
-    this._reset();
+    this.pen.reset(this.penOptions);
     this._isEmpty = true;
   }
-  fromDataURL(dataUrl, options = {}, callback) {
-    const image = new Image();
-    const ratio = options.ratio || window.devicePixelRatio || 1;
-    const width = options.width || this.canvas.width / ratio;
-    const height = options.height || this.canvas.height / ratio;
-    this._reset();
-    image.onload = () => {
-      this._ctx.drawImage(image, 0, 0, width, height);
-      if (callback) {
-        callback();
-      }
-    };
-    image.onerror = (error) => {
-      if (callback) {
-        callback(error);
-      }
-    };
-    image.src = dataUrl;
-    this._isEmpty = false;
-  }
-  toDataURL(type = 'image/png', encoderOptions) {
-    switch (type) {
-      case 'image/svg+xml':
-        return this._toSVG();
-      default:
-        return this.canvas.toDataURL(type, encoderOptions);
-    }
-  }
+
   on() {
     this.canvas.style.touchAction = 'none';
     this.canvas.style.msTouchAction = 'none';
@@ -283,30 +181,25 @@ class SignaturePad {
   isEmpty() {
     return this._isEmpty;
   }
-  fromData(pointGroups) {
-    this.clear();
-    this._fromData(pointGroups, ({ color, curve }) => this._drawCurve({ color, curve }), ({ color, point }) => this._drawDot({ color, point }));
-    this._data = pointGroups;
-    this._isEmpty = false;
-  }
-  toData() {
-    return this._data;
-  }
+
+
   switchToEraser() {
     this._ctx.globalCompositeOperation = "destination-out";
-    this.minWidth = 10;
-    this.maxWidth = 10;
+    this.pen.setOption('minWidth',10)
+    this.pen.setOption('maxWidth',10)
   }
   _strokeBegin(event) {
     const newPointGroup = {
-      color: this.penColor,
+      // color: this.pen.penColor,
+      // ratio:this.pen.boardScale,
+      penOptions:this.pen.outputOptions(),
       points: [],
     };
     if (typeof this.onBegin === 'function') {
       this.onBegin(event);
     }
     this._data.push(newPointGroup);
-    this._reset();
+    this.pen.newOperation()
     this._strokeUpdate(event);
     this._isEmpty = false;
 
@@ -320,23 +213,19 @@ class SignaturePad {
     }
     const x = event.clientX;
     const y = event.clientY;
-    const pressure =  event.pressure||(event.force)
-    const point = this._createPoint(x, y);
+
     const lastPointGroup = this._data[this._data.length - 1];
     const lastPoints = lastPointGroup.points;
     const lastPoint = lastPoints.length > 0 && lastPoints[lastPoints.length - 1];
-    const isLastPointTooClose = lastPoint
+    const point = this._createPoint(x, y);
+    point.pressure =  event.pressure||(event.force)
+    point.type = this._setPointType(isEnd,lastPoint)
+    point.isLastPointTooClose = lastPoint
       ? point.distanceTo(lastPoint) <= this.minDistance
       : false;
     const color = lastPointGroup.color;
-    if (!lastPoint || !(lastPoint && isLastPointTooClose) || (isEnd)) {
-      const curve = this._addPoint(point, pressure, isEnd);
-      if (!lastPoint) {
-        this._drawDot({ color, point });
-      }
-      else if (curve) {
-        this._drawCurve({ color, curve });
-      }
+    if (this._isNeedDraw(point)) {
+      this.pen.draw(point)
       lastPoints.push({
         time: point.time,
         x: point.x,
@@ -345,6 +234,12 @@ class SignaturePad {
     }
 
   }
+  _isNeedDraw(point){
+  return point.type==='start' || !(point.type!=='start' && point.isLastPointTooClose) || point.type!=='end'
+  }
+  _setPointType(isEnd,lastPoint){
+    return (isEnd&& this._data[this._data.length - 1].points.length > 5)?'end':(!lastPoint?'start':'common')
+    }
   _strokeEnd(event) {
 
     this._strokeUpdate(event, true);
@@ -369,184 +264,33 @@ class SignaturePad {
     this.canvas.addEventListener('touchmove', this._handleTouchMove);
     this.canvas.addEventListener('touchend', this._handleTouchEnd);
   }
-  _reset() {
-    this._lastPoints = [];
-    this._lastVelocity = 0;
-    this._lastWidth = this.dotSize;
-    this._ctx.fillStyle = this.penColor;
-  }
+
   _createPoint(x, y) {
     const rect = this.canvas.getBoundingClientRect();
     return new Point(x - rect.left, y - rect.top, new Date().getTime());
   }
-  _addPoint(point, pressure, isEnd = false) {
-    const { _lastPoints } = this;
-    _lastPoints.push(point);
-    if (_lastPoints.length > 2) {
-      if (_lastPoints.length === 3) {
-        _lastPoints.unshift(_lastPoints[0]);
-      }
-      const widths = this._calculateCurveWidths(_lastPoints[1], _lastPoints[2], pressure, isEnd);
-      const curve = Bezier.fromPoints(_lastPoints, widths);
-      _lastPoints.shift();
-      return curve;
-    }
-    return null;
+
+
+  fromDataURL(dataUrl, options = {}, callback) {
+    this.converter.fromDataURL(dataUrl, options = {}, callback)
+    this._isEmpty = false;
   }
-  _calculateCurveWidths(startPoint, endPoint, pressure = 0, isEnd = false) {
-    let param = 1
-    pressure = pressure === 0 ? this.lightLimit : pressure/2
-    if (this.touchsStrategy == 'pressure') {
-      pressure = pressure*pressure;
-      param = pressure;
-    } else if(this.touchsStrategy == 'speed'){
-      param = 1 /( (this.velocityFilterWeight *endPoint.velocityFrom(startPoint) +
-        (1 - this.velocityFilterWeight) * this._lastVelocity )+1);
-    }
-    else {
-      pressure = pressure*pressure;
-      param = pressure/( (this.velocityFilterWeight *endPoint.velocityFrom(startPoint) +
-      (1 - this.velocityFilterWeight) * this._lastVelocity )+1) ;
-    }
-    const newWidth = isEnd && this._data[this._data.length - 1].points.length > 5 ? this.minWidth : this._strokeWidth(param);
-    const widths = {
-      end: newWidth,
-      start: this._lastWidth,
-    };
-    this._lastVelocity = param;
-    this._lastWidth = newWidth;
-    return widths;
+  toDataURL(type = 'image/png', encoderOptions) {
+    this.converter.toDataURL(type , encoderOptions)
+
   }
 
-  _strokeWidth(param) {
-    return Math.max(this.maxWidth * param, this.minWidth);
+  fromData(pointGroups) {
+    this.clear();
+    // this.converter.fromData(pointGroups)
+    this.converter.fromData(pointGroups, this.pen);
+    this._data = pointGroups;
+    this._isEmpty = false;
   }
-  _drawCurveSegment(x, y, width) {
-    const ctx = this._ctx;
-    ctx.moveTo(x, y);
-    ctx.arc(x, y, width, 0, 2 * Math.PI, false);
+  toData() {
+    return this._data;
   }
-  _drawCurve({ color, curve }) {
-    const ctx = this._ctx;
-    const widthDelta = curve.endWidth - curve.startWidth;
 
-    const drawSteps = Math.ceil(curve.length() * this.boardScale * 5);
-    ctx.beginPath();
-    ctx.fillStyle = color;
-    for (let i = 0; i < drawSteps; i += 1) {
-      const t = i / drawSteps;
-      const tt = t * t;
-      const ttt = tt * t;
-      const u = 1 - t;
-      const uu = u * u;
-      const uuu = uu * u;
-      let x = uuu * curve.startPoint.x;
-      x += 3 * uu * t * curve.control1.x;
-      x += 3 * u * tt * curve.control2.x;
-      x += ttt * curve.endPoint.x;
-      let y = uuu * curve.startPoint.y;
-      y += 3 * uu * t * curve.control1.y;
-      y += 3 * u * tt * curve.control2.y;
-      y += ttt * curve.endPoint.y;
-      const width = Math.min(curve.startWidth + t * widthDelta, this.maxWidth);
-      this._drawCurveSegment(x, y, width);
-    }
-    ctx.closePath();
-    ctx.fill();
-  }
-  _drawDot({ color, point, }) {
-    const ctx = this._ctx;
-    const width = typeof this.dotSize === 'function' ? this.dotSize() : this.dotSize;
-    ctx.beginPath();
-    this._drawCurveSegment(point.x, point.y, width);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-  }
-  _fromData(pointGroups, drawCurve, drawDot) {
-    for (const group of pointGroups) {
-      const { color, points } = group;
-      if (points.length > 1) {
-        for (let j = 0; j < points.length; j += 1) {
-          const basicPoint = points[j];
-          const point = new Point(basicPoint.x, basicPoint.y, basicPoint.time);
-          this.penColor = color;
-          if (j === 0) {
-            this._reset();
-          }
-          const curve = this._addPoint(point);
-          if (curve) {
-            drawCurve({ color, curve });
-          }
-        }
-      }
-      else {
-        this._reset();
-        drawDot({
-          color,
-          point: points[0],
-        });
-      }
-    }
-  }
-  _toSVG() {
-    const pointGroups = this._data;
-    const ratio = Math.max(window.devicePixelRatio || 1, 1);
-    const minX = 0;
-    const minY = 0;
-    const maxX = this.canvas.width / ratio;
-    const maxY = this.canvas.height / ratio;
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('width', this.canvas.width.toString());
-    svg.setAttribute('height', this.canvas.height.toString());
-    this._fromData(pointGroups, ({ color, curve }) => {
-      const path = document.createElement('path');
-      if (!isNaN(curve.control1.x) &&
-        !isNaN(curve.control1.y) &&
-        !isNaN(curve.control2.x) &&
-        !isNaN(curve.control2.y)) {
-        const attr = `M ${curve.startPoint.x.toFixed(3)},${curve.startPoint.y.toFixed(3)} ` +
-          `C ${curve.control1.x.toFixed(3)},${curve.control1.y.toFixed(3)} ` +
-          `${curve.control2.x.toFixed(3)},${curve.control2.y.toFixed(3)} ` +
-          `${curve.endPoint.x.toFixed(3)},${curve.endPoint.y.toFixed(3)}`;
-        path.setAttribute('d', attr);
-        path.setAttribute('stroke-width', (curve.endWidth * 2.25).toFixed(3));
-        path.setAttribute('stroke', color);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-linecap', 'round');
-        svg.appendChild(path);
-      }
-    }, ({ color, point }) => {
-      const circle = document.createElement('circle');
-      const dotSize = typeof this.dotSize === 'function' ? this.dotSize() : this.dotSize;
-      circle.setAttribute('r', dotSize.toString());
-      circle.setAttribute('cx', point.x.toString());
-      circle.setAttribute('cy', point.y.toString());
-      circle.setAttribute('fill', color);
-      svg.appendChild(circle);
-    });
-    const prefix = 'data:image/svg+xml;base64,';
-    const header = '<svg' +
-      ' xmlns="http://www.w3.org/2000/svg"' +
-      ' xmlns:xlink="http://www.w3.org/1999/xlink"' +
-      ` viewBox="${minX} ${minY} ${maxX} ${maxY}"` +
-      ` width="${maxX}"` +
-      ` height="${maxY}"` +
-      '>';
-    let body = svg.innerHTML;
-    if (body === undefined) {
-      const dummy = document.createElement('dummy');
-      const nodes = svg.childNodes;
-      dummy.innerHTML = '';
-      for (let i = 0; i < nodes.length; i += 1) {
-        dummy.appendChild(nodes[i].cloneNode(true));
-      }
-      body = dummy.innerHTML;
-    }
-    const footer = '</svg>';
-    const data = header + body + footer;
-    return prefix + btoa(data);
-  }
 }
 
 export default SignaturePad;

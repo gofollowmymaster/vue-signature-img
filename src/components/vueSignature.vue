@@ -33,14 +33,17 @@ export default {
   }),
   computed: {
     brushOptions() {
+      debugger
       let options = {
         ...brushOption[this.brushWidth],    //笔刷宽度范围
         minDistance: 5,    //两点间最小距离  影响起笔笔锋  线条顺滑
-        dotSize: 0.1,      //起点大小  影响起笔笔锋
+        dotSize: 0.1,      //起点大小  影响起笔笔锋/
+      \>
       };
       for (let item in options) {
         options[item] = options[item] / this.ratioWidth;
       }
+
       return options;
     },
   },
@@ -65,9 +68,9 @@ export default {
               ].includes(key)
           )
           .forEach((option) => {
-            if (this.signature[option]) {
+            // if (this.signature[option]) {
               options[option] = nextOptions[option];
-            }
+            // }
           });
         this.updateOptions(options);
       },
@@ -95,11 +98,14 @@ export default {
         ...this.brushOptions,
         boardScale: this.ratioWidth,
       });
+      this.$emit('loaded')
       window.addEventListener("resize", this.resizeHandler);
     },
     resizeHandler() {
+      console.log('window.devicePixelRatio',window.devicePixelRatio)
       this.setBoardSize();
-      this.signature.boardScale = this.ratioWidth;
+      // this.signature.boardScale = this.ratioWidth;
+     this.updateOptions({boardScale:this.ratioWidth});
     },
     // 设置画板尺寸和图片原始尺寸一致(不同尺寸屏幕下画板尺寸始终一致)
     setBoardSize() {
@@ -110,6 +116,7 @@ export default {
       this.$refs.signaturePadCanvas.getContext("2d").restore();
       this.$refs.signaturePadCanvas.getContext("2d").save();
       //设缩放比例
+      console.log('this.ratioHeight--',this.ratioHeight)
       this.$refs.signaturePadCanvas
         .getContext("2d")
         .scale(this.ratioWidth, this.ratioHeight);
@@ -148,15 +155,15 @@ export default {
     },
     updateOptions(options) {
       Object.keys(options).forEach((option) => {
-        if (this.signature[option]) {
-          this.signature[option] = options[option];
+        if (this.signature) {
+          this.signature.setPenOption(option,options[option]);
         }
       });
     },
     toData() {
       return this.signature.toData();
     },
-    formData(data){
+    fromData(data){
           return this.signature.fromData(data);
     }
   },
