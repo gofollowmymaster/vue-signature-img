@@ -66,11 +66,11 @@ export default {
       this.$refs.signature.off();
     },
     save() {
-      let data = this.$refs.signature.toData();
-      const div = document.createElement("div");
-      div.innerHTML = JSON.stringify(data);
+      let data = this.$refs.signature.toDataUrl();
+      const img = document.createElement("img");
+      img.src = data;
       const newWin = window.open("");
-      newWin.document.body.appendChild(div);
+      newWin.document.body.appendChild(img);
       newWin.document.title = "流程图数据";
     },
     saveImg() {
