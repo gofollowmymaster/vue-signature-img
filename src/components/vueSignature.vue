@@ -33,17 +33,14 @@ export default {
   }),
   computed: {
     brushOptions() {
-      debugger
       let options = {
         ...brushOption[this.brushWidth],    //笔刷宽度范围
         minDistance: 5,    //两点间最小距离  影响起笔笔锋  线条顺滑
         dotSize: 0.1,      //起点大小  影响起笔笔锋/
-      \>
       };
       for (let item in options) {
         options[item] = options[item] / this.ratioWidth;
       }
-
       return options;
     },
   },
@@ -92,7 +89,7 @@ export default {
       this.$refs.signaturePadCanvas.width = this.canvasSize.w;
       this.$refs.signaturePadCanvas.height = this.canvasSize.h;
       this.setBoardSize();
-
+   debugger
       this.signature = new SignaturePad(this.$refs.signaturePadCanvas, {
         ...this.options,
         ...this.brushOptions,
@@ -175,7 +172,7 @@ export default {
         style: {
           ...customStyle,
         },
-        attr:{
+        attrs:{
           class:'signature-board'
         }
       },
@@ -214,7 +211,6 @@ export default {
   position: relative;
   top: 0px;
   left: 0px;
-  width: 100vw;
   height: 100%;
 }
 </style>

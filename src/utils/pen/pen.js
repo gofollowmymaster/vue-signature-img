@@ -3,7 +3,7 @@ export default class Pen {
   constructor(options) {
     this.reset(options)
   }
-  reset({ touchsStrategy = 'mix', parmFilterWeight = 0.7, defaultLastVelocity = 0.5,  minWidth = 0.5, maxWidth = 2.5, ctx, boardScale = 1,lastWidth = (minWidth + maxWidth) / 5, minDistance = 5, dotSize = 0.2, penColor = 'black' }) {
+  reset({ touchsStrategy = 'mix', parmFilterWeight = 0.7, defaultLastVelocity = 0,  minWidth = 0.5, maxWidth = 2.5, ctx, boardScale = 1,lastWidth = (minWidth + maxWidth) / 10, minDistance = 5, dotSize = 0.2, penColor = 'black' }) {
     this.touchsStrategy = touchsStrategy
     this.parmFilterWeight = parmFilterWeight
     this.defaultLastVelocity = this.lastVelocity = defaultLastVelocity
@@ -23,7 +23,7 @@ export default class Pen {
       touchsStrategy: this.touchsStrategy ,
       parmFilterWeight:this.parmFilterWeight ,
       lastVelocity:this.defaultLastVelocity  ,
-      lastWidth: this.lastWidth ,
+      lastWidth: (this.minWidth + this.maxWidth) / 10,
       maxWidth: this.maxWidth,
       minWidth:this.minWidth ,
       boardScale: this.boardScale ,
@@ -36,20 +36,19 @@ export default class Pen {
   newOperation() {
     this._lastPoints = [];
     this.lastVelocity = this.defaultLastVelocity;
-    this.lastWidth = (this.minWidth + this.maxWidth) / 2;
+    this.lastWidth = (this.minWidth + this.maxWidth) / 10;
     this.ctx.fillStyle = this.penColor;
   }
   setOption(key, value) {
     this[key] = value
   }
   draw(point) {
-
+    console.log('--point--',point)
     const curve = this.addPoint(point);
     if (point.type === 'start') {
       this.drawDot(point);
     }
     else if (curve) {
-      debugger
       this.drawCurve(curve);
     }
   }
@@ -61,17 +60,18 @@ export default class Pen {
       if (_lastPoints.length === 3) {
         _lastPoints.unshift(_lastPoints[0]);
       }
-      debugger
-      const widths = this.calculateCurveWidths(_lastPoints[1], _lastPoints[2]);
+      const widths = this.calculateCurveWidths(_lastPoints[1], _lastPoints[2],point);
       const curve = Bezier.fromPoints(_lastPoints, widths);
+
       _lastPoints.shift();
       return curve;
     }
+
     return null;
   }
-  calculateCurveWidths(startPoint, endPoint) {
+  calculateCurveWidths(startPoint, endPoint,currentPoint) {
     let param = 1
-    let pressure = endPoint.pressure, isEnd = (endPoint.type == 'end')
+    let pressure = currentPoint.pressure, isEnd = (currentPoint.type == 'end')
     if (this.touchsStrategy == 'pressure' && pressure) {
       pressure = pressure * pressure;
       param = pressure;
@@ -83,7 +83,10 @@ export default class Pen {
     } else {
       param = 1 / ((this.parmFilterWeight * endPoint.velocityFrom(startPoint) +
         (1 - this.parmFilterWeight) * this.lastVelocity) + 1);
+
     }
+    console.log('--speed',pressure,this.touchsStrategy, endPoint.velocityFrom(startPoint) , this.parmFilterWeight,this.lastVelocity,param)
+
     const newWidth = isEnd ? this.minWidth : this.strokeWidth(param);
     const widths = {
       end: newWidth,

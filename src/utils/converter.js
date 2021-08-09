@@ -38,11 +38,19 @@ export default class converter{
     for (const group of pointGroups) {
       const { penOptions,points } = group;
 
+      let ratio=  penOptions.boardScale/pen.boardScale
+
       Object.keys(penOptions).forEach((option)=>{
-        if(option!=='boardScale')
-        pen.setOption(option,penOptions[option])
+        if(option!=='boardScale'){
+          if(['minWidth','maxWidth','minDistance','dotSize'].includes(option)){
+          pen.setOption(option,penOptions[option]*ratio)
+
+          }else{
+          pen.setOption(option,penOptions[option])
+
+          }
+        }
       })
-      let ratio=penOptions.boardScale/pen.boardScale
       debugger
       if (points.length > 1) {
         for (let j = 0; j < points.length; j += 1) {

@@ -2,10 +2,10 @@
  * Signature Pad v3.0.0-beta.4 | https://github.com/szimek/signature_pad
  * (c) 2020 Szymon Nowak | Released under the MIT license
  */
-import Pen from  './pen/pen.js'
-import Point  from './point.js'
+import Pen from './pen/pen.js'
+import Point from './point.js'
 
-import Converter  from './converter.js'
+import Converter from './converter.js'
 
 
 
@@ -50,45 +50,41 @@ function throttle(fn, wait = 250) {
 }
 
 class SignaturePad {
-  constructor(canvas,{ parmFilterWeight =0.7,minWidth=0.5,maxWidth=2.5 ,throttleTime=16,minDistance=5,dotSize=(minWidth +  maxWidth) / 2 ,penColor='black',touchsStrategy="mix",boardScale=1.5,onBegin=()=>{},onEnd=()=>{},backgroundColor='rgba(0,0,0,0)'}) {
+  constructor(canvas, { parmFilterWeight = 0.7, minWidth = 0.5, maxWidth = 2.5, throttleTime = 16, minDistance = 5, dotSize = (minWidth + maxWidth) / 2, penColor = 'black', touchsStrategy = "mix", boardScale = 1.5, onBegin = () => { }, onEnd = () => { }, backgroundColor = 'rgba(0,0,0,0)' }) {
     this.canvas = canvas;
     this.onBegin = onBegin;
     this.onEnd = onEnd;
     this.backgroundColor = backgroundColor;
-
-    this._strokeMoveUpdate = throttleTime > 0 ? throttle(SignaturePad.prototype._strokeUpdate, throttleTime) : SignaturePad.prototype._strokeUpdate ;
-    touchsStrategy = ( ['pressure','mix'].includes(touchsStrategy) &&( 'ontouchstart' in window ||'PointerEvent' in window)) ? touchsStrategy : 'speed'
-
-    let ctx=canvas.getContext('2d');
-    this._ctx =ctx;
+    this.minDistance = minDistance;
 
 
+    this._strokeMoveUpdate = throttleTime > 0 ? throttle(SignaturePad.prototype._strokeUpdate, throttleTime) : SignaturePad.prototype._strokeUpdate;
+    touchsStrategy = (['pressure', 'mix'].includes(touchsStrategy) && ('ontouchstart' in window || 'PointerEvent' in window)) ? touchsStrategy : 'speed'
 
-   this.penOptions={ctx, parmFilterWeight ,minWidth,maxWidth ,minDistance,dotSize ,penColor,touchsStrategy,boardScale,}
-    this.pen=new Pen(this.penOptions)
-    this.converter=new Converter( canvas)
+    let ctx = canvas.getContext('2d');
+    this._ctx = ctx;
+
+    this.penOptions = { ctx, parmFilterWeight, minWidth, maxWidth, minDistance, dotSize, penColor, touchsStrategy, boardScale, }
+    this.pen = new Pen(this.penOptions)
+    this.converter = new Converter(canvas)
 
 
 
     this._handleMouseDown = (event) => {
-      console.log('_handleMouseDown',event)
-      if (event.which === 1|| !this._pointerId) {
-        this._pointerId=event.pointerId||1
+      if (event.which === 1 || !this._pointerId) {
+        this._pointerId = event.pointerId || 1
         this._strokeBegin(event);
       }
     };
     this._handleMouseMove = (event) => {
-      event.pointerId==event.pointerId||1
-      if (this._pointerId==event.pointerId) {
+      if (this._pointerId == (event.pointerId||1)) {
         //防止多点触控线条乱连bug
         this._lastTouch = { x: event.clientX, y: event.clientY }
         this._strokeMoveUpdate(event);
       }
     };
     this._handleMouseUp = (event) => {
-      console.log('_handleMouseUp',event)
-      event.pointerId==event.pointerId||1
-      if (event.which === 1 && this._pointerId==event.pointerId) {
+      if (event.which === 1 && this._pointerId == (event.pointerId||1)) {
         this._pointerId = null;
         if (this._lastTouch.x == event.clientX && this._lastTouch.y == event.clientY) {
           //保证移动和结束是同一根手指
@@ -105,11 +101,9 @@ class SignaturePad {
         this._lastTouch = { x: touch.clientX, y: touch.clientY }
         this._strokeBegin(touch);
       }
-      console.log('---_handleTouchStart--', event, this._lastTouch)
 
     };
     this._handleTouchMove = (event) => {
-      // console.log('---_handleTouchMove--',event)
       event.preventDefault();
       if (this._touchStarted) {
         const touch = event.targetTouches[0];
@@ -119,13 +113,11 @@ class SignaturePad {
       }
     };
     this._handleTouchEnd = (event) => {
-      // console.log('---_handleTouchEnd--', event)
       const wasCanvasTouched = event.target === this.canvas;
       if (wasCanvasTouched) {
         if (this._touchStarted) {
           event.preventDefault();
           let touch = event.changedTouches[0];
-          console.log('---_handleTouchEnd--', touch, this._lastTouch)
           if (this._lastTouch.x == touch.clientX && this._lastTouch.y == touch.clientY) {
             this._strokeEnd(touch);
             this._touchStarted = false;
@@ -137,8 +129,8 @@ class SignaturePad {
     this.clear();
     this.on();
   }
-  setPenOption(key,value){
-    this.pen.setOption(key,value)
+  setPenOption(key, value) {
+    this.pen.setOption(key, value)
   }
   clear() {
     const { _ctx: ctx, canvas } = this;
@@ -154,15 +146,15 @@ class SignaturePad {
     this.canvas.style.touchAction = 'none';
     this.canvas.style.msTouchAction = 'none';
     this._ctx.globalCompositeOperation = "source-over";
-    debugger
-    if (window.PointerEvent) {
-      this._handlePointerEvents();
-  } else {
-      this._handleMouseEvents();
-      if ('ontouchstart' in window) {
-          this._handleTouchEvents();
+
+      if (window.PointerEvent) {
+        this._handlePointerEvents();
+    } else {
+    this._handleMouseEvents();
+    if ('ontouchstart' in window) {
+      this._handleTouchEvents();
       }
-  }
+    }
   }
   off() {
     this._ctx.globalCompositeOperation = "source-over";
@@ -185,14 +177,12 @@ class SignaturePad {
 
   switchToEraser() {
     this._ctx.globalCompositeOperation = "destination-out";
-    this.pen.setOption('minWidth',10)
-    this.pen.setOption('maxWidth',10)
+    this.pen.setOption('minWidth', 10)
+    this.pen.setOption('maxWidth', 10)
   }
   _strokeBegin(event) {
     const newPointGroup = {
-      // color: this.pen.penColor,
-      // ratio:this.pen.boardScale,
-      penOptions:this.pen.outputOptions(),
+      penOptions: this.pen.outputOptions(),
       points: [],
     };
     if (typeof this.onBegin === 'function') {
@@ -205,7 +195,6 @@ class SignaturePad {
 
   }
   _strokeUpdate(event, isEnd = false) {
-    // console.log('--_strokeUpdate---',this._data, event)
 
     if (this._data.length === 0) {
       this._strokeBegin(event);
@@ -218,28 +207,37 @@ class SignaturePad {
     const lastPoints = lastPointGroup.points;
     const lastPoint = lastPoints.length > 0 && lastPoints[lastPoints.length - 1];
     const point = this._createPoint(x, y);
-    point.pressure =  event.pressure||(event.force)
-    point.type = this._setPointType(isEnd,lastPoint)
+
+    point.pressure =this._getPressure(event)
+    point.type = this._setPointType(isEnd, lastPoint)
+
     point.isLastPointTooClose = lastPoint
       ? point.distanceTo(lastPoint) <= this.minDistance
       : false;
-    const color = lastPointGroup.color;
+
     if (this._isNeedDraw(point)) {
+
       this.pen.draw(point)
       lastPoints.push({
         time: point.time,
         x: point.x,
         y: point.y,
+        type:point.type,
+        pressure:point.pressure
       });
     }
 
   }
-  _isNeedDraw(point){
-  return point.type==='start' || !(point.type!=='start' && point.isLastPointTooClose) || point.type!=='end'
+  _getPressure(event){
+    let pressure=( event.pressure || (event.force))
+  return pressure>0.5?pressure:0
   }
-  _setPointType(isEnd,lastPoint){
-    return (isEnd&& this._data[this._data.length - 1].points.length > 5)?'end':(!lastPoint?'start':'common')
-    }
+  _isNeedDraw(point) {
+    return point.type === 'start' || (point.type !== 'start' && !point.isLastPointTooClose) || point.type == 'end'
+  }
+  _setPointType(isEnd, lastPoint) {
+    return (isEnd && this._data[this._data.length - 1].points.length > 5) ? 'end' : (!lastPoint ? 'start' : 'common')
+  }
   _strokeEnd(event) {
 
     this._strokeUpdate(event, true);
@@ -248,18 +246,24 @@ class SignaturePad {
     }
   }
   _handlePointerEvents() {
-    this._mouseButtonDown = false;
+    this._pointerId = null;
+    this.eventType='point'
     this.canvas.addEventListener('pointerdown', this._handleMouseDown);
     this.canvas.addEventListener('pointermove', this._handleMouseMove);
     document.addEventListener('pointerup', this._handleMouseUp);
   }
   _handleMouseEvents() {
-    this._mouseButtonDown = false;
+    this._pointerId = null;
+    this.eventType='mouse'
+
     this.canvas.addEventListener('mousedown', this._handleMouseDown);
     this.canvas.addEventListener('mousemove', this._handleMouseMove);
     document.addEventListener('mouseup', this._handleMouseUp);
   }
   _handleTouchEvents() {
+    this._touchStarted =false
+    this.eventType='touch'
+
     this.canvas.addEventListener('touchstart', this._handleTouchStart);
     this.canvas.addEventListener('touchmove', this._handleTouchMove);
     this.canvas.addEventListener('touchend', this._handleTouchEnd);
@@ -276,7 +280,7 @@ class SignaturePad {
     this._isEmpty = false;
   }
   toDataURL(type = 'image/png', encoderOptions) {
-    this.converter.toDataURL(type , encoderOptions)
+    this.converter.toDataURL(type, encoderOptions)
 
   }
 
@@ -294,4 +298,3 @@ class SignaturePad {
 }
 
 export default SignaturePad;
-//# sourceMappingURL=signature_pad.js.map

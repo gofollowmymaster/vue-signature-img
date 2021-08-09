@@ -57,15 +57,15 @@ export function cloneCanvas(oldCanvas) {
 // 笔刷配置
 export const brushOption = {
     1: {
-        minWidth: 0.3,
+        minWidth: 0.2,
         maxWidth: 1.3,
     },
     2: {
-        minWidth: 0.4,
+        minWidth: 0.3,
         maxWidth: 2
     },
     3: {
-        minWidth: 0.5,
+        minWidth: 0.4,
         maxWidth: 2.5
     },
     4: {
@@ -89,7 +89,7 @@ export const brushOption = {
         maxWidth: 8
     },
     9: {
-        minWidth: 0.9,
+        minWidth: 1,
         maxWidth: 10
     },
 }
