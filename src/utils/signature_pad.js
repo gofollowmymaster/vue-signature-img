@@ -7,9 +7,6 @@ import Point from './point.js'
 
 import Converter from './converter.js'
 
-
-
-
 function throttle(fn, wait = 250) {
   let previous = 0;
   let timeout = null;
@@ -81,14 +78,14 @@ class SignaturePad {
     this._handleMouseMove = (event) => {
       event.preventDefault();
 
-      if (this._pointerId == (event.pointerId||1)) {
+      if (this._pointerId == (event.pointerId || 1)) {
         //防止多点触控线条乱连bug
         this._lastTouch = { x: event.clientX, y: event.clientY }
         this._strokeMoveUpdate(event);
       }
     };
     this._handleMouseUp = (event) => {
-      if (event.which === 1 && this._pointerId == (event.pointerId||1)) {
+      if (event.which === 1 && this._pointerId == (event.pointerId || 1)) {
         this._pointerId = null;
         if (this._lastTouch.x == event.clientX && this._lastTouch.y == event.clientY) {
           //保证移动和结束是同一根手指
@@ -142,8 +139,9 @@ class SignaturePad {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     this._data = [];
-    this.pen.reset(this.penOptions);
+    // this.pen.reset(this.penOptions);
     this._isEmpty = true;
+    ctx.fillStyle = this.pen.penColor;
   }
 
   on() {
@@ -151,12 +149,12 @@ class SignaturePad {
     this.canvas.style.msTouchAction = 'none';
     this._ctx.globalCompositeOperation = "source-over";
 
-      if (window.PointerEvent) {
-        this._handlePointerEvents();
+    if (window.PointerEvent) {
+      this._handlePointerEvents();
     } else {
-    this._handleMouseEvents();
-    if ('ontouchstart' in window) {
-      this._handleTouchEvents();
+      this._handleMouseEvents();
+      if ('ontouchstart' in window) {
+        this._handleTouchEvents();
       }
     }
   }
@@ -212,7 +210,7 @@ class SignaturePad {
     const lastPoint = lastPoints.length > 0 && lastPoints[lastPoints.length - 1];
     const point = this._createPoint(x, y);
 
-    point.pressure =this._getPressure(event)
+    point.pressure = this._getPressure(event)
     point.type = this._setPointType(isEnd, lastPoint)
 
     point.isLastPointTooClose = lastPoint
@@ -226,15 +224,15 @@ class SignaturePad {
         time: point.time,
         x: point.x,
         y: point.y,
-        type:point.type,
-        pressure:point.pressure
+        type: point.type,
+        pressure: point.pressure
       });
     }
 
   }
-  _getPressure(event){
-    let pressure=( event.pressure || (event.force))
-  return pressure>0.5?pressure:0
+  _getPressure(event) {
+    let pressure = (event.pressure || (event.force))
+    return pressure > 0.5 ? pressure : 0
   }
   _isNeedDraw(point) {
     return point.type === 'start' || (point.type !== 'start' && !point.isLastPointTooClose) || point.type == 'end'
@@ -251,22 +249,22 @@ class SignaturePad {
   }
   _handlePointerEvents() {
     this._pointerId = null;
-    this.eventType='point'
+    this.eventType = 'point'
     this.canvas.addEventListener('pointerdown', this._handleMouseDown);
     this.canvas.addEventListener('pointermove', this._handleMouseMove);
     document.addEventListener('pointerup', this._handleMouseUp);
   }
   _handleMouseEvents() {
     this._pointerId = null;
-    this.eventType='mouse'
+    this.eventType = 'mouse'
 
     this.canvas.addEventListener('mousedown', this._handleMouseDown);
     this.canvas.addEventListener('mousemove', this._handleMouseMove);
     document.addEventListener('mouseup', this._handleMouseUp);
   }
   _handleTouchEvents() {
-    this._touchStarted =false
-    this.eventType='touch'
+    this._touchStarted = false
+    this.eventType = 'touch'
 
     this.canvas.addEventListener('touchstart', this._handleTouchStart);
     this.canvas.addEventListener('touchmove', this._handleTouchMove);

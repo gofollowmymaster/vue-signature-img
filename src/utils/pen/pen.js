@@ -3,7 +3,7 @@ export default class Pen {
   constructor(options) {
     this.reset(options)
   }
-  reset({ touchsStrategy = 'mix', parmFilterWeight = 0.7, defaultLastVelocity = 0,  minWidth = 0.5, maxWidth = 2.5, ctx, boardScale = 1,lastWidth = (minWidth + maxWidth) / 10, minDistance = 5, dotSize = 0.2, penColor = 'black' }) {
+  reset({ touchsStrategy = 'mix', parmFilterWeight = 0.7, defaultLastVelocity = 0,  minWidth = 0.5, maxWidth = 2.5, ctx, boardScale = 1,lastWidth = (minWidth + maxWidth) / 10,dotSize = 0.2, penColor = 'black' }) {
     this.touchsStrategy = touchsStrategy
     this.parmFilterWeight = parmFilterWeight
     this.defaultLastVelocity = this.lastVelocity = defaultLastVelocity
@@ -11,7 +11,7 @@ export default class Pen {
     this.maxWidth = maxWidth
     this.minWidth = minWidth
     this.boardScale = boardScale
-    this.minDistance = minDistance
+
     this.dotSize = dotSize
     this.penColor = penColor
     this._lastPoints = []
@@ -27,7 +27,6 @@ export default class Pen {
       maxWidth: this.maxWidth,
       minWidth:this.minWidth ,
       boardScale: this.boardScale ,
-      minDistance:this.minDistance ,
       dotSize: this.dotSize,
       penColor:this.penColor,
 

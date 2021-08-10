@@ -6,7 +6,6 @@
         img="/0.png"
         :customStyle="customStyle"
         :brushWidth="brushWidth"
-        :isBrushOn="isBrushOn"
         :options="options"
         @loaded="signatureLoaded"
       />
@@ -45,7 +44,7 @@ export default {
         throttle: 2, //节流  性能/跟随速度/结束笔锋
         touchsStrategy: "mix", //笔画宽度策略 pressure/speed/mix
       },
-      isBrushOn: true,
+
       brushWidth: 3,
     };
   },

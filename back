@@ -1,0 +1,533 @@
+<template>
+  <div class="signbox">
+    <div class="tools">
+      <button
+        id="brushWidth"
+        title="画笔大小"
+        :style="{ color: options.penColor }"
+        @click="setBrush"
+      >
+        <i class="icon iconfont iconyanse1"></i>
+        <span class="btn_1"></span>
+      </button>
+      <button
+        id="brush"
+        title="画笔"
+        @click="brushHandle"
+        :class="{ active_: activeBtn == 'brush' }"
+      >
+        <i class="icon iconfont iconicon-test"></i>
+        <span class="btn_2"></span>
+      </button>
+      <button
+        id="eraser"
+        title="橡皮擦"
+        v-show="eraserShow"
+        @click="setEraser"
+        :class="{ active_: activeBtn == 'eraser' }"
+      >
+        <i class="icon iconfont iconicon-test1"></i>
+        <span class="btn_3"></span>
+      </button>
+      <button
+        id="clear"
+        title="清空"
+        :class="{ active_: activeBtn == 'clear' }"
+        @click="clearSign"
+      >
+        <i class="icon iconfont iconqingchugeshi"></i>
+        <span class="btn_4"></span>
+      </button>
+      <!-- <button id="undo" title="撤销"><i class="icon iconfont iconchexiao"></i></button> -->
+      <button id="save" title="保存" @click="saveSign">
+        <i class="icon iconfont iconziyuan"></i>
+        <span class="btn_5"></span>
+      </button>
+      <button id="back" @click="back()" title="返回">
+        <i class="icon iconfont iconfanhui"></i>
+        <span class="btn_6"></span>
+      </button>
+    </div>
+    <section class="board-container">
+           <vueSignature
+        ref="signature"
+        :img="imgurl"
+        :customStyle="customStyle"
+        :brushWidth="brushWidth"
+        :options="options"
+        @loaded="signatureLoaded"
+      />
+      <water-mark v-if="withWaterMark" :loaded="bgLoaded"></water-mark>
+    </section>
+
+    <div v-if="loading" class="loading">
+      <van-loading type="spinner" />
+    </div>
+    <van-popup
+      v-model="brushWidthShow"
+      class="brushStyle"
+      :style="{ width: '90%' }"
+    >
+      <h2>调整画笔</h2>
+      <div style="margin-bottom: 40px; text-align: center">
+        <van-stepper
+          v-model="brushValue"
+          step="1"  min="1"    max="9"
+          @change="chageBrushValue"
+          input-width="40px"   button-size="32px"
+          style="display: inline-block"
+        />
+      </div>
+      <div id="color-group1" class="color-group">
+        <ul>
+          <li  v-for="color in colors" :key="color"
+             class="color-item"  :class="{active:color==options.penColor}"
+            :style="{backgroundColor: color}"
+            @click="changeColor($event)"
+          ></li>
+        </ul>
+      </div>
+    </van-popup>
+  </div>
+</template>
+
+<script>
+import "../assets/css/canvasBaseBoard.css";
+import "../assets/css/base.css";
+import Vue from "vue";
+import { Toast, Loading, Popup } from "vant";
+import waterMark from "@/components/waterMark.vue";
+import vueSignature from "vue-signature-mergeimg";
+
+Vue.use(Toast).use(Loading).use(Popup);
+import { saveLoad } from "@/apis/apis.js";
+export default {
+  components: { waterMark,vueSignature },
+  data() {
+    return {
+
+
+      customStyle: { width: "100%" },
+      options: {
+        backgroundColor: "transparent", //背景色
+        //  minDistance: 5,    //两点间最小距离  影响起笔笔锋  线条顺滑
+        penColor: "rgb(0,0,0)",
+        velocityFilterWeight: 0.7, //上一点(宽度)权重
+        throttle: 2, //节流  性能/跟随速度/结束笔锋
+        touchsStrategy: "mix", //笔画宽度策略 pressure/speed/mix
+      },
+      brushWidth: 3,
+
+      eraserShow: true,
+      activeBtn: "brush",
+      canvasBoardShow: true,
+      bgLoaded: false,
+      loading: false,
+      brushValue: 3,
+      signaturePad: "",
+      openSubmit: false,
+      brushWidthShow: false,
+      stopClick: true,
+      colors:['white','black','#ff3333','#0066ff','#ffff33','#33cc66','gray']
+    };
+  },
+  props: {
+    withWaterMark: {
+      type: Boolean,
+    },
+    imgurl: {
+      type: String,
+    },
+    nowIndexId: {
+      type: Number,
+    },
+    id: {
+      type: String,
+    },
+  },
+
+  mounted() {},
+  methods: {
+    signatureLoaded() {
+      this.bgLoaded = true;
+      this.signaturePad = this.$refs.signature
+    },
+    chageBrushValue(width) {
+      this.brushWidth = width;
+      this.signaturePad.setBrushWidth(width);
+    },
+    //画笔粗细
+    setBrush() {
+      this.brushWidthShow = true;
+    },
+    //像皮
+    setEraser() {
+      this.signaturePad.switchToEraser();
+      this.activeBtn = "eraser";
+    },
+
+    //清除
+    clearSign() {
+      // this.eraserShow = false;
+
+      this.signaturePad.clearBoard();
+      // this.activeBtn = "clear";
+      this.openSubmit = false;
+    },
+    brushHandle() {
+      debugger
+      if (this.activeBtn != "brush") {
+        this.eraserShow = true;
+        this.activeBtn = "brush";
+        this.openSubmit = true;
+       this.signaturePad.on()
+
+
+      } else {
+        this.signaturePad.off();
+        this.activeBtn = "";
+       this.signaturePad.off()
+        // this.eraserShow = false;
+      }
+    },
+
+    //保存
+    savabj() {
+      //  this.loading = true;
+      this.stopClick = true;
+      let data = this.signaturePad.toDataUrl();
+      const img = document.createElement("img");
+      img.src = data;
+      const newWin = window.open("");
+      newWin.document.body.appendChild(img);
+      newWin.document.title = "流程图数据";
+      // if (this.savearr.length) {
+      //   let jsonData = JSON.stringify(this.savearr);
+      //   let data = {
+      //     signSavePos: jsonData,
+      //   };
+      //   debugger;
+      //   saveLoad(data)
+      //     .then((res) => {
+      //       this.loading = false;
+      //       //this.images[this.nowImageId]=res.data.data.imagePath+new Date().getTime();
+      //       let obj = {
+      //         url: `${res.data.data.imagePath}?name=${new Date().getTime()}`,
+      //         now: this.nowIndexId,
+      //       };
+      //       this.$emit("savebtn", obj);
+      //       // svgArrObj = [];
+      //       this.savearr = [];
+      //       Toast(res.data.msg);
+      //       this.signaturePad.historyDetaAlls = [];
+      //       setTimeout(() => {
+      //         this.$emit("backbtn");
+      //       }, 1000);
+      //       //钉钉横屏置为竖屏
+      //       this.stopClick = true;
+      //     })
+      //     .catch((error) => {
+      //       this.$emit("backbtn");
+      //       this.loading = false;
+      //       // svgArrObj = [];
+      //       this.savearr = [];
+      //       this.stopClick = true;
+      //     });
+      // } else {
+      //   Toast("没有可提交的笔迹");
+      //   this.stopClick = false;
+      // }
+    },
+    saveSign() {
+      debugger;
+      if (!this.stopClick) {
+        return;
+      }
+      this.stopClick = false;
+      this.savabj();
+
+      this.activeBtn = "";
+      this.openSubmit = false;
+    },
+
+    //改变画笔颜色
+    changeColor(e) {
+      let target = e.target;
+      let li = document.querySelectorAll("#color-group1 li");
+      for (let i = 0; i < li.length; i++) {
+        li[i].classList.remove("active"); //去除所有的active
+      }
+      target.classList.add("active"); //给当前点击的li赋给状态
+      this.options.penColor = target.style.backgroundColor;
+      //笔宽颜色按钮也同时渲染上当前选择的颜色,并且关闭页面
+
+      this.brushWidthShow = false;
+      this.signaturePad.setOption('penColor',this.options.penColor);
+    },
+    back() {
+      //签批页的返回按钮
+      this.$emit("backbtn");
+    },
+  },
+};
+</script>
+<style lang="less" scoped>
+.pinch-zoom-container {
+  overflow: auto !important;
+}
+.signbox {
+  height: 100%;
+  width: 100vw;
+  position: relative;
+  top: 0px;
+  background: #fff;
+  z-index: 2100;
+  overflow: hidden;
+}
+canvas {
+  width: 100%;
+  height: 100%;
+}
+//.mainSign{touch-action: none;}
+.btn_1:after {
+  content: "笔宽颜色";
+  -webkit-transform: scale(0.6);
+  transform: scale(0.6);
+  font-size: 12px;
+  display: flex;
+}
+.tools i {
+  position: absolute;
+}
+.btn_2:after {
+  content: "全文签批";
+  -webkit-transform: scale(0.6);
+  transform: scale(0.6);
+  font-size: 12px;
+  display: flex;
+}
+.btn_3:after {
+  content: "擦除";
+  -webkit-transform: scale(0.8);
+  transform: scale(0.8);
+  font-size: 12px;
+  display: flex;
+}
+.btn_4:after {
+  content: "清空";
+  -webkit-transform: scale(0.8);
+  transform: scale(0.8);
+  font-size: 12px;
+  display: flex;
+}
+.btn_5:after {
+  content: "保存";
+  -webkit-transform: scale(0.8);
+  transform: scale(0.8);
+  font-size: 12px;
+  display: flex;
+}
+.btn_6:after {
+  content: "返回";
+  -webkit-transform: scale(0.8);
+  transform: scale(0.8);
+  font-size: 12px;
+  display: flex;
+}
+.iconfont {
+  top: 1.5rem;
+}
+.tools span {
+  font-size: 0.6rem;
+  margin-top: 1.3rem;
+}
+.active_ {
+  background: #4993ec !important;
+  color: white !important;
+}
+.active_ .btn_2:after {
+  color: #fff;
+}
+.tools button {
+  border-radius: 10px;
+}
+#back,
+#save,
+#clear,
+#eraser,
+#brush,
+#brushWidth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  background: #fff;
+  color: #666;
+}
+.loading {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  background: rgba(25, 25, 25, 0.6);
+  display: flex;
+  top: 0px;
+  left: 0px;
+}
+.distributeFileFlase {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  color: #e0e0e0;
+  margin-top: 50%;
+}
+#color-group .btn {
+  background: #1686d8;
+  color: #fff;
+  border-radius: 5px;
+  padding: 4px 4px;
+}
+#color-group1 .btn {
+  background: #1686d8;
+  color: #fff;
+  border-radius: 5px;
+  padding: 4px 4px;
+}
+.tc {
+  text-align: center;
+}
+.pageCout {
+  position: fixed;
+  bottom: 0px;
+  left: 0px;
+}
+.color-group a {
+  color: #000;
+}
+.color-group1 a {
+  color: #000;
+}
+.fileList li {
+  padding: 4px 8px;
+  border-bottom: 1px solid #ddd;
+  color: #666;
+}
+.mainSign {
+  height: 100%;
+  background: #eee;
+  .van-tabs__line {
+    background: #1686d8;
+  }
+  .van-tab--active {
+    color: #1686d8;
+  }
+  .van-tabs__wrap {
+    position: fixed;
+    top: 48px;
+    width: 100%;
+    z-index: 9;
+  }
+  .van-tabs__content {
+    padding-top: 92px;
+  }
+  .headerOperation {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 9;
+    padding: 0.5rem;
+    color: #1686d8;
+    font-size: 15px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    height: 2rem;
+    background: #f6f9fb;
+    .back {
+      width: 6rem;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .send {
+      width: 6rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+  .fullText {
+    position: fixed;
+    top: 92px;
+    width: 100%;
+    z-index: 9;
+    height: 30px;
+    background: #fff;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #eee;
+    div {
+      width: auto;
+      padding: 0.5rem;
+      font-size: 12px;
+      border: 1px solid #eee;
+      border-radius: 0.2rem;
+      margin-right: 0.4rem;
+    }
+  }
+  .mainContent {
+    margin-top: 0px;
+    padding: 16px;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    word-break: normal;
+    background: #eee;
+  }
+  .page {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    z-index: 9;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #666;
+    padding: 3px 6px;
+  }
+  .pageNum {
+    margin: 0rem 0.5rem;
+  }
+  .brushStyle {
+    padding: 30px;
+    border-radius: 10px;
+    z-index: 2020;
+  }
+  .brushStyle h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+}
+.board-container {
+  position: relative;
+
+  margin-top: 70px;
+}
+
+.board-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100vw;
+}
+</style>

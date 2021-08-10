@@ -1,7 +1,7 @@
 {
   "name": "vue-signature-mergeimg",
   "description": "a vue signature component can sign  on a image",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "author": "hua zheng <1850796924@qq.com>",
   "license": "MIT",
   "private": false,

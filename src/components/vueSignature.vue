@@ -74,6 +74,7 @@ export default {
       deep: true,
     },
     img: function (img) {
+
       this.destoryBoard();
       img && this.initBoard();
     },
