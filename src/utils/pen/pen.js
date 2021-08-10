@@ -110,8 +110,8 @@ export default class Pen {
   drawCurve(curve) {
     const ctx = this.ctx;
     const widthDelta = curve.endWidth - curve.startWidth;
-
-    const drawSteps = Math.ceil(curve.length() * 2.5);
+    let scale=this.boardScale>2?this.boardScale:2
+    const drawSteps = Math.ceil(curve.length() * scale);
     ctx.beginPath();
     ctx.fillStyle = this.penColor;
     for (let i = 0; i < drawSteps; i += 1) {

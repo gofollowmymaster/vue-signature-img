@@ -43,8 +43,7 @@ export default class converter{
       Object.keys(penOptions).forEach((option)=>{
         if(option!=='boardScale'){
           if(['minWidth','maxWidth','minDistance','dotSize'].includes(option)){
-          pen.setOption(option,penOptions[option]*ratio)
-
+             pen.setOption(option,penOptions[option]*ratio)
           }else{
           pen.setOption(option,penOptions[option])
 
