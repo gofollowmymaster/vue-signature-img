@@ -16,7 +16,8 @@
       <button @click="closeBrush">关闭笔刷</button>
       <button @click="save">保存</button>
       <button @click="setBrushWidth">宽度+1</button>
-      <button @click="setBrushColor">颜色</button>
+      <button @click="clear">清空</button>
+            <button @click="setBrushColor">颜色</button>
       <button @click="setEraser">橡皮</button>
     </section>
   </div>
@@ -94,6 +95,10 @@ export default {
     setEraser() {
       this.$refs.signature.switchToEraser();
     },
+    clear(){
+      this.$refs.signature.clearBoard();
+
+    }
   },
 };
 </script>
