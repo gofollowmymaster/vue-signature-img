@@ -71,12 +71,16 @@ class SignaturePad {
 
 
     this._handleMouseDown = (event) => {
+      event.preventDefault();
+
       if (event.which === 1 || !this._pointerId) {
         this._pointerId = event.pointerId || 1
         this._strokeBegin(event);
       }
     };
     this._handleMouseMove = (event) => {
+      event.preventDefault();
+
       if (this._pointerId == (event.pointerId||1)) {
         //防止多点触控线条乱连bug
         this._lastTouch = { x: event.clientX, y: event.clientY }

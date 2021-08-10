@@ -66,7 +66,7 @@ export const brushOption = {
     },
     3: {
         minWidth: 0.4,
-        maxWidth: 2.5
+        maxWidth: 3.5
     },
     4: {
         minWidth: 0.5,

@@ -35,7 +35,7 @@ export default {
     brushOptions() {
       let options = {
         ...brushOption[this.brushWidth],    //笔刷宽度范围
-        minDistance: 5,    //两点间最小距离  影响起笔笔锋  线条顺滑
+        minDistance: 3,    //两点间最小距离  影响起笔笔锋  线条顺滑
         dotSize: 0.1,      //起点大小  影响起笔笔锋/
       };
       for (let item in options) {

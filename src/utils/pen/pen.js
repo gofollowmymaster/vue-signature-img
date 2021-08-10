@@ -77,11 +77,13 @@ export default class Pen {
       param = pressure;
     }
     else if (this.touchsStrategy == 'mix' && pressure) {
+      let velocity=endPoint.velocityFrom(startPoint)
       pressure =  pressure /2 ;
-      param = pressure / ((this.parmFilterWeight * endPoint.velocityFrom(startPoint) +
+      param = pressure / ((this.parmFilterWeight * Math.pow(velocity,2) +
         (1 - this.parmFilterWeight) * this.lastVelocity) + 1);
     } else {
-      param = 1 / ((this.parmFilterWeight * endPoint.velocityFrom(startPoint) +
+      let velocity=endPoint.velocityFrom(startPoint)
+      param = 1 / ((this.parmFilterWeight *Math.pow(velocity,2) +
         (1 - this.parmFilterWeight) * this.lastVelocity) + 1);
 
     }
